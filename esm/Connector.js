@@ -40,7 +40,13 @@ class Connector {
     });
   }
 
-  async listDevices() { // eslint-disable-line no-empty-function,no-unused-vars
+  async listDevices() {
+    this.ioc.emit('listDevices', (response) => {
+      if (response === 'ok') {
+        return Promise.resolve('Devices listed');
+      }
+      return Promise.reject(new Error(`Error removing device ${id}: ${response}`));
+    });
   }
 
   // Device (fog) to cloud
