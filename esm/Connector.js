@@ -89,10 +89,6 @@ class Connector {
       cb(data);
     });
   }
-
-  onTest() {
-    this.ioc.emit('123');
-  }
 }
 
 export { Connector }; // eslint-disable-line import/prefer-default-export
