@@ -4,10 +4,11 @@ class Connector {
   async start(settings) {
     this.iotaUrl = `http://${settings.hostname}:${settings.port}`;
     this.ioc = socket.connect(this.iotaUrl);
-    if (this.ioc.connected) {
-      return Promise.resolve(`Connected to ${this.iotaUrl}`);
-    }
-    return Promise.reject(new Error(`Error connecting to IoT Agent (${this.iotaUrl})`));
+    return new Promise((reject, resolve) => {
+      this.ioc.on('connected', () => { resolve(); });
+      this.ioc.on('connect_error', () => { reject(new Error(`Connection to ${this.iotaUrl} error.`)); });
+      this.ioc.on('connect_timeout', () => { reject(new Error(`Connection to ${this.iotaUrl} timeout.`)); });
+    });
   }
 
   async addDevice(device) {
