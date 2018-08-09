@@ -103,8 +103,17 @@ class Connector {
 
   // cb(event) where event is { id, sensorId, data }
   onDataUpdated(cb) {
-    this.ioc.on('onDataUpdated', (data) => {
-      cb(data);
+    this.ioc.on('onDataUpdated', (device, attributes) => {
+      const sensorId = device.id;
+      let id = null;
+      const data = attributes.value;
+      const sat = device.staticAttributes;
+      for (let i = 0; i < sat.length; i += 1) {
+        if (sat[i].name === 'thing') {
+          id = sat[i].value;
+        }
+      }
+      cb(id, sensorId, data);
     });
   }
 }
