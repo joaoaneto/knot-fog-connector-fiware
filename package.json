@@ -10,6 +10,7 @@
   "module": "./esm/index.js",
   "license": "MIT",
   "scripts": {
+    "preinstall": "npm run build",
     "lint": "eslint .",
     "build": "babel esm --out-dir cjs"
   },
