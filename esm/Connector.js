@@ -16,7 +16,7 @@ class Connector {
     this.ioc.on('reconnect_failed', () => { console.log('Socket reconnect failed.'); });
 
     return new Promise((resolve, reject) => {
-      this.ioc.on('connected', () => { resolve(`Connected to ${this.iotaUrl}`); });
+      this.ioc.on('connect', () => { resolve(`Connected to ${this.iotaUrl}`); });
       this.ioc.on('connect_error', () => { reject(new Error(`Connection to ${this.iotaUrl} error.`)); });
       this.ioc.on('connect_timeout', () => { reject(new Error(`Connection to ${this.iotaUrl} timeout.`)); });
     });
@@ -41,12 +41,13 @@ class Connector {
   }
 
   async listDevices() {
-    this.ioc.emit('listDevices', (response) => {
-      if (response === 'ok') {
-        return Promise.resolve('Devices listed');
+    this.ioc.emit('listDevices', response => new Promise((resolve, reject) => {
+      if (response) {
+        resolve(response);
+      } else {
+        reject(new Error(`Listing devices: ${response}`));
       }
-      return Promise.reject(new Error(`Error removing device ${id}: ${response}`));
-    });
+    }));
   }
 
   // Device (fog) to cloud
