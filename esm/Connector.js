@@ -1,6 +1,16 @@
 /* eslint-disable no-console */
 import * as socket from 'socket.io-client';
 
+async function getThingId(device) {
+  return new Promise((resolve, reject) => {
+    device.staticAttributes.forEach(attr => {
+      if (attr.name === 'thing') {
+        return resolve(attr.value);
+      }
+    });
+  });
+}
+
 class Connector {
   async start(host, port) {
     this.iotaUrl = `http://${host}:${port}`;
@@ -114,24 +124,21 @@ class Connector {
 
   // cb(event) where event is { id, sensorId }
   onDataRequested(cb) {
-    this.ioc.on('onDataRequested', (data) => {
-      cb(data);
+    this.ioc.on('onCommandReceived', async (device, attributes) => {
+      if (attributes.type === 'getData') {
+        const id = await getThingId(device);
+        cb(id, parseInt(device.id));
+      }
     });
   }
 
   // cb(event) where event is { id, sensorId, data }
   onDataUpdated(cb) {
-    this.ioc.on('onDataUpdated', (device, attributes) => {
-      const sensorId = parseInt(device.id, 10);
-      let id = null;
-      const data = attributes.value;
-      const sat = device.staticAttributes;
-      for (let i = 0; i < sat.length; i += 1) {
-        if (sat[i].name === 'thing') {
-          id = sat[i].value;
-        }
+    this.ioc.on('onCommandReceived', async (device, attributes) => {
+      if (attributes.type === 'setData') {
+        const id = await getThingId(device);
+        cb(id, parseInt(device.id), attributes.value);
       }
-      cb({ id, sensorId, data });
     });
   }
 }
