@@ -13,7 +13,10 @@
     "lint": "eslint .",
     "build": "babel esm --out-dir cjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "mqtt": "^2.18.8",
+    "request-promise-native": "^1.0.5"
+  },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
