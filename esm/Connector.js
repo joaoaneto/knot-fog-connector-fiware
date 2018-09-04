@@ -1,25 +1,44 @@
+import _ from 'lodash';
 import request from 'request-promise-native';
-import mqtt from 'mqtt';
+import mqtt from 'async-mqtt';
 
 const headers = {
   'fiware-service': 'knot',
   'fiware-servicepath': '/'
 }
 
-const apiKey = 'knot123';
+const apiKey = 'test';
+
+function mapSchemaToFiware(schema) {
+  let schemaAttributes = [];
+
+  _.forOwn(schema, (value, key) => {
+    schemaAttributes.push({
+      name: key,
+      type: typeof value,
+      value: value
+    });
+  });
+
+  return schemaAttributes;
+}
 
 function mapDeviceToFiware(device) {
   return {
     devices: [{
       device_id: device.id,
-      entity_name: device.name,
+      entity_name: device.id,
       entity_type: 'device',
       protocol:'IoTA-UL',
       transport: 'MQTT',
       attributes: [{
-          object_id: 'o',
           name: 'online',
           type: 'Boolean'
+      }],
+      static_attributes: [{
+          name: 'name',
+          type: 'string',
+          value: device.name
       }]
     }]
   }
@@ -27,68 +46,76 @@ function mapDeviceToFiware(device) {
 
 function mapSensorToFiware(id, schema) {
   return {
-    devices: [{
-      device_id: schema[0].sensor_id,
-      entity_name: schema[0].name,
-      entity_type: 'sensor',
-      protocol:'IoTA-UL',
-      transport: 'MQTT',
-      attributes: [{
-          object_id: 'o',
-          name: 'online',
-          type: 'Boolean'
-      }],
-      commands: [
-        {
-          name: 'setData',
-          type: 'command'
-        },
-        {
-          name: 'getData',
-          type: 'command'
-        }
-      ],
-      static_attributes: [{
-          name: 'device',
-          type: 'string',
-          value: id
-      }]
-    }]
+    device_id: schema.sensor_id,
+    entity_name: schema.sensor_id,
+    entity_type: 'sensor',
+    protocol:'IoTA-UL',
+    transport: 'MQTT',
+    commands: [
+      {
+        name: 'setData',
+        type: 'command'
+      },
+      {
+        name: 'getData',
+        type: 'command'
+      }
+    ],
+    static_attributes: [{
+        name: 'device',
+        type: 'string',
+        value: id
+    }].concat(mapSchemaToFiware(schema)),
   }
 }
 
 class Connector {
-  async start() {
+  constructor(settings) {
+    this.iotaUrl = `http://${settings.hostname}:${settings.port}/iot/devices`;
+  }
 
+  async start() {
+    return new Promise((resolve, reject) => {
+      this.client = mqtt.connect('mqtt://localhost');
+
+      this.client.on('connect', () => resolve('connected'));
+      this.client.on('reconnect', () => reject('trying to reconnect'));
+      this.client.on('close', () => reject('disconnected'));
+      this.client.on('error', (error) => reject(`connection error: ${error}`));      
+    });
   }
 
   async addDevice(device) {
-    const url = '';
     const fiwareDevice = mapDeviceToFiware(device);
-    await request.post({url, headers: headers, json: true}).form(fiwareDevice);
+    
+    console.log(fiwareDevice);
+
+    await request.post({url: this.iotaUrl, headers: headers, body: fiwareDevice, json: true});
   }
 
   async removeDevice(id) {
-    const url = `http://localhost:4041/iot/devices/${id}`;
+    const url = `${this.iotaUrl}/${id}`;
     await request.delete({url, headers: headers});
   }
 
   async listDevices() {
-    const url = 'http://localhost:4041/iot/devices';
-    return request.get({url, headers:headers});
+    return request.get({url: this.iotaUrl, headers:headers});
   }
 
   // Device (fog) to cloud
 
   async publishData(id, data) {
-    this.iota.publish(`/${apiKey}/${data.sensor_id}/attrs/${data.sensor_id}`, data.value);
+    await this.client.publish(`/${apiKey}/${id}/attrs/o`, data.value);
   }
 
-  async updateSchema(id, schema) {
-    schema.forEach((schema) => {
-      const sensorFiware = mapSensorToFiware(id, schema);
-      await request.post({url, headers: headers, json: true}).form(sensorFiware);
+  async updateSchema(id, schemaList) {
+    let sensors = [];
+
+    schemaList.map((schema) => {
+      sensors.push(mapSensorToFiware(id, schema));
     });
+
+    await request.post({url: this.iotaUrl, headers: headers, body: sensors, json: true});
   }
 
   async updateProperties(id, properties) {

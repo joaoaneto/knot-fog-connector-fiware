@@ -11,10 +11,14 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint .",
-    "build": "babel esm --out-dir cjs"
+    "build": "babel esm --out-dir cjs",
+    "start:dev": "babel-node esm"
   },
   "dependencies": {
+    "async-mqtt": "^1.0.1",
+    "lodash": "^4.17.10",
     "mqtt": "^2.18.8",
+    "request": "^2.88.0",
     "request-promise-native": "^1.0.5"
   },
   "devDependencies": {
