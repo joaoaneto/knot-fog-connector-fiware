@@ -1,0 +1,7 @@
+{
+    "service": {
+        "name": "knot",
+        "cbroker": "http://orion:1026",
+        "resource": "/iot/d"
+    }
+}
