@@ -90,7 +90,14 @@ class Connector {
     });
   }
 
-  async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
+  async removeDevice(id) {
+    const url = `${this.iotAgentUrl}/iot/devices/${id}`;
+    const headers = {
+      'fiware-service': 'knot',
+      'fiware-servicepath': '/device',
+    };
+
+    await request.delete({ url, headers });
   }
 
   async listDevices() { // eslint-disable-line no-empty-function,no-unused-vars
