@@ -12,9 +12,14 @@
   "scripts": {
     "preinstall": "npm run build",
     "lint": "eslint .",
-    "build": "babel esm --out-dir cjs"
+    "build": "babel esm --out-dir cjs",
+    "start:dev": "babel-node esm"
   },
-  "dependencies": {},
+  "dependencies": {
+    "config": "^2.0.1",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.5"
+  },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
