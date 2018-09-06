@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import request from 'request-promise-native';
 import config from 'config';
 
@@ -73,6 +74,35 @@ function mapDeviceToFiware(device) {
   };
 }
 
+function mapSchemaToFiware(schema) {
+  const schemaAttributes = [];
+
+  _.forOwn(schema, (value, key) => {
+    schemaAttributes.push({
+      name: key,
+      type: typeof value,
+      value,
+    });
+  });
+
+  return schemaAttributes;
+}
+
+function mapSensorToFiware(id, schema) {
+  return {
+    device_id: schema.sensor_id.toString(),
+    entity_name: schema.sensor_id.toString(),
+    entity_type: 'sensor',
+    protocol: 'IoTA-UL',
+    transport: 'MQTT',
+    static_attributes: [{
+      name: 'device',
+      type: 'string',
+      value: id,
+    }].concat(mapSchemaToFiware(schema)),
+  };
+}
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.hostname}:${settings.port}`;
@@ -94,6 +124,7 @@ class Connector {
     await request.post({
       url, headers, body: { devices: [fiwareDevice] }, json: true,
     });
+    await createService(this.iotAgentUrl, `/device/${device.id}`, device.id, 'sensor');
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
@@ -107,7 +138,20 @@ class Connector {
   async publishData(id, data) { // eslint-disable-line no-empty-function,no-unused-vars
   }
 
-  async updateSchema(id, schema) { // eslint-disable-line no-empty-function,no-unused-vars
+  async updateSchema(id, schemaList) {
+    const sensors = [];
+    const url = `${this.iotAgentUrl}/iot/devices`;
+
+    const headers = {
+      'fiware-service': 'knot',
+      'fiware-servicepath': `/device/${id}`,
+    };
+
+    schemaList.map(schema => sensors.push(mapSensorToFiware(id, schema)));
+
+    await request.post({
+      url, headers, body: { devices: sensors }, json: true,
+    });
   }
 
   async updateProperties(id, properties) { // eslint-disable-line no-empty-function,no-unused-vars
