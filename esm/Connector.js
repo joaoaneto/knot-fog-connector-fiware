@@ -53,6 +53,21 @@ async function createService(iotAgentUrl, serviceConfig, servicePath, apiKey, en
   });
 }
 
+function mapDeviceToFiware(device) {
+  return {
+    device_id: device.id,
+    entity_name: device.id,
+    entity_type: 'device',
+    protocol: 'IoTA-UL',
+    transport: 'MQTT',
+    static_attributes: [{
+      name: 'name',
+      type: 'string',
+      value: device.name,
+    }],
+  };
+}
+
 class Connector {
   constructor(settings) {
     this.serviceConfig = settings.service;
@@ -63,7 +78,18 @@ class Connector {
     await createService(this.iotAgentUrl, this.serviceConfig, '/device', 'default', 'device');
   }
 
-  async addDevice(device) { // eslint-disable-line no-empty-function,no-unused-vars
+  async addDevice(device) {
+    const url = `${this.iotAgentUrl}/iot/devices`;
+    const headers = {
+      'fiware-service': 'knot',
+      'fiware-servicepath': '/device',
+    };
+
+    const fiwareDevice = mapDeviceToFiware(device);
+
+    await request.post({
+      url, headers, body: { devices: [fiwareDevice] }, json: true,
+    });
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
