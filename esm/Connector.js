@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import request from 'request-promise-native';
 
 async function serviceExists(url, headers) {
@@ -76,6 +77,23 @@ function mapDeviceToFiware(device) {
   };
 }
 
+function mapSensorToFiware(id, schema) {
+  const schemaList = _.map(schema, (value, key) => ({ name: key, type: typeof value, value }));
+
+  return {
+    device_id: schema.sensor_id.toString(),
+    entity_name: schema.sensor_id.toString(),
+    entity_type: 'sensor',
+    protocol: 'IoTA-UL',
+    transport: 'MQTT',
+    static_attributes: [{
+      name: 'device',
+      type: 'string',
+      value: id,
+    }].concat(schemaList),
+  };
+}
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
@@ -99,6 +117,7 @@ class Connector {
     await request.post({
       url, headers, body: { devices: [fiwareDevice] }, json: true,
     });
+    await createService(this.iotAgentUrl, this.orionUrl, this.serviceConfig, `/device/${device.id}`, device.id, 'sensor');
   }
 
   async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
@@ -112,7 +131,18 @@ class Connector {
   async publishData(id, data) { // eslint-disable-line no-empty-function,no-unused-vars
   }
 
-  async updateSchema(id, schema) { // eslint-disable-line no-empty-function,no-unused-vars
+  async updateSchema(id, schemaList) {
+    const url = `${this.iotAgentUrl}/iot/devices`;
+    const headers = {
+      'fiware-service': 'knot',
+      'fiware-servicepath': `/device/${id}`,
+    };
+
+    const sensors = schemaList.map(schema => mapSensorToFiware(id, schema));
+
+    await request.post({
+      url, headers, body: { devices: sensors }, json: true,
+    });
   }
 
   async updateProperties(id, properties) { // eslint-disable-line no-empty-function,no-unused-vars
