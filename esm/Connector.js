@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import request from 'request-promise-native';
 import config from 'config';
+import mqtt from 'async-mqtt';
 
 async function serviceExists(url, headers) {
   const service = await request.get({ url, headers, json: true });
@@ -121,10 +122,20 @@ function getDeviceSchema(device) {
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.hostname}:${settings.port}`;
+    this.iotAgentMQTT = `mqtt://${settings.hostname}`;
   }
 
   async start() {
     await createService(this.iotAgentUrl, '/device', 'default', 'device');
+
+    return new Promise((resolve, reject) => {
+      this.client = mqtt.connect(this.iotAgentMQTT);
+
+      this.client.on('connect', () => resolve('connected'));
+      this.client.on('reconnect', () => reject(new Error('trying to reconnect')));
+      this.client.on('close', () => reject(new Error('disconnected')));
+      this.client.on('error', error => reject(error));
+    });
   }
 
   async addDevice(device) {
