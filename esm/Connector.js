@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import request from 'request-promise-native';
+import mqtt from 'async-mqtt';
 
 async function serviceExists(url, headers) {
   const service = await request.get({ url, headers, json: true });
@@ -119,11 +120,21 @@ class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
     this.orionUrl = `http://${settings.orion.hostname}:${settings.orion.port}`;
+    this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
     this.serviceConfig = settings.service;
   }
 
   async start() {
     await createService(this.iotAgentUrl, this.orionUrl, this.serviceConfig, '/device', 'default', 'device');
+
+    return new Promise((resolve, reject) => {
+      this.client = mqtt.connect(this.iotAgentMQTT);
+
+      this.client.on('connect', () => resolve());
+      this.client.on('reconnect', () => reject(new Error('trying to reconnect')));
+      this.client.on('close', () => reject(new Error('disconnected')));
+      this.client.on('error', error => reject(error));
+    });
   }
 
   async addDevice(device) {
