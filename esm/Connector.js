@@ -124,6 +124,19 @@ function getDeviceSchema(device) {
   return schema;
 }
 
+function parseULMessage(topic, message) {
+  const id = topic.split('/')[1];
+  const sensorId = message.slice(0, message.indexOf('@'));
+  const command = message.slice(message.indexOf('@') + 1, message.indexOf('|'));
+  const value = message.slice(message.indexOf('|') + 1, message.length);
+
+  return {
+    id,
+    sensorId,
+    command,
+    value,
+  };
+}
 
 class Connector {
   constructor(settings) {
@@ -212,7 +225,10 @@ class Connector {
       'fiware-servicepath': `/device/${id}`,
     };
 
-    schemaList.map(schema => sensors.push(mapSensorToFiware(id, schema)));
+    schemaList.map(async (schema) => {
+      sensors.push(mapSensorToFiware(id, schema));
+      await this.client.subscribe(`/${id}/${schema.sensor_id}/cmd`);
+    });
 
     await request.post({
       url, headers, body: { devices: sensors }, json: true,
@@ -237,7 +253,15 @@ class Connector {
   }
 
   // cb(event) where event is { id, sensorId, data }
-  onDataUpdated(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  async onDataUpdated(cb) {
+    this.client.on('message', async (topic, payload) => {
+      const msg = parseULMessage(topic.toString(), payload.toString());
+
+      if (msg.command === 'setData') {
+        await this.client.publish(`${topic}exe`, payload);
+        cb({ id: msg.id, sensorId: parseInt(msg.sensorId, 10), data: msg.value });
+      }
+    });
   }
 }
 
