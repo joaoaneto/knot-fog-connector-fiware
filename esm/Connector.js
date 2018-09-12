@@ -103,6 +103,27 @@ function mapSensorToFiware(id, schema) {
   };
 }
 
+function getDeviceSchema(device) {
+  const schema = {};
+
+  schema.sensor_id = parseInt(device.device_id, 10);
+
+  device.static_attributes.forEach((attr) => {
+    if (attr.name === 'value_type') {
+      schema.value_type = attr.value;
+    } else if (attr.name === 'unit') {
+      schema.unit = attr.value;
+    } else if (attr.name === 'type_id') {
+      schema.type_id = attr.value;
+    } else if (attr.name === 'name') {
+      schema.name = attr.value;
+    }
+  });
+
+  return schema;
+}
+
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.hostname}:${settings.port}`;
@@ -130,7 +151,35 @@ class Connector {
   async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
   }
 
-  async listDevices() { // eslint-disable-line no-empty-function,no-unused-vars
+  async listDevices() {
+    const url = `${this.iotAgentUrl}/iot/devices`;
+    const headers = {
+      'fiware-service': 'knot',
+      'fiware-servicepath': '/device',
+    };
+
+    const devices = await request.get({ url, headers, json: true });
+    if (devices.count === 0) {
+      return [];
+    }
+
+    const deviceList = [];
+
+    const promises = devices.devices.map(async (device) => {
+      const schemaList = [];
+      const name = device.static_attributes.find(obj => obj.name === 'name').value;
+
+      headers['fiware-servicepath'] = `/device/${device.device_id}`;
+      const sensors = await request.get({ url, headers, json: true });
+
+      sensors.devices.forEach(sensor => schemaList.push(getDeviceSchema(sensor)));
+
+      deviceList.push({ id: device.device_id, name, schema: schemaList });
+    });
+
+    await Promise.all(promises);
+
+    return deviceList;
   }
 
   // Device (fog) to cloud
