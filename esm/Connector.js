@@ -249,7 +249,15 @@ class Connector {
   }
 
   // cb(event) where event is { id, sensorId }
-  onDataRequested(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  async onDataRequested(cb) {
+    this.client.on('message', async (topic, payload) => {
+      const msg = parseULMessage(topic.toString(), payload.toString());
+
+      if (msg.command === 'getData') {
+        await this.client.publish(`${topic}exe`, payload);
+        cb({ id: msg.id, sensorId: parseInt(msg.sensorId, 10) });
+      }
+    });
   }
 
   // cb(event) where event is { id, sensorId, data }
