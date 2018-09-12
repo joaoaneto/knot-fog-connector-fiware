@@ -194,7 +194,8 @@ class Connector {
 
   // Device (fog) to cloud
 
-  async publishData(id, data) { // eslint-disable-line no-empty-function,no-unused-vars
+  async publishData(id, data) {
+    await this.client.publish(`/${id}/${data.sensor_id}/attrs/value`, data.value);
   }
 
   async updateSchema(id, schemaList) {
