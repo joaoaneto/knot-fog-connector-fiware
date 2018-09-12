@@ -154,6 +154,11 @@ async function messageHandler(topic, payload) {
     this.onDataUpdatedCb(
       { id: message.id, sensorId: parseInt(message.entityId, 10), data: message.value },
     );
+  } else if (message.command === 'getData') {
+    await this.client.publish(`${topic}exe`, payload);
+    this.onDataRequestedCb(
+      { id: message.id, sensorId: parseInt(message.entityId, 10) },
+    );
   }
 }
 
@@ -167,6 +172,7 @@ class Connector {
 
   async start() {
     this.onDataUpdatedCb = _.noop();
+    this.onDataRequestedCb = _.noop();
 
     await createService(this.iotAgentUrl, this.orionUrl, this.serviceConfig, '/device', 'default', 'device');
 
@@ -268,7 +274,8 @@ class Connector {
   }
 
   // cb(event) where event is { id, sensorId }
-  onDataRequested(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  async onDataRequested(cb) {
+    this.onDataRequestedCb = cb;
   }
 
   // cb(event) where event is { id, sensorId, data }
