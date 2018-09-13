@@ -118,15 +118,33 @@ function getDeviceSchema(device) {
   return schema;
 }
 
+function parseULValue(value) {
+  if (value.indexOf('=') === -1) {
+    return value;
+  }
+
+  const objValue = {};
+  const attrs = value.split('|');
+
+  attrs.forEach((attr) => {
+    objValue[attr.slice(0, attr.indexOf('='))] = attr.slice(attr.indexOf('=') + 1, attr.length);
+  });
+
+  return objValue;
+}
+
 function parseULMessage(topic, message) {
-  const id = topic.split('/')[1];
-  const sensorId = message.slice(0, message.indexOf('@'));
+  const apiKey = topic.split('/')[1];
+
+  const entityId = message.slice(0, message.indexOf('@'));
   const command = message.slice(message.indexOf('@') + 1, message.indexOf('|'));
-  const value = message.slice(message.indexOf('|') + 1, message.length);
+  const value = parseULValue(message.slice(message.indexOf('|') + 1, message.length));
+
+  const id = apiKey === 'default' ? entityId : apiKey;
 
   return {
     id,
-    sensorId,
+    entityId,
     command,
     value,
   };
@@ -164,6 +182,7 @@ class Connector {
       url, headers, body: { devices: [fiwareDevice] }, json: true,
     });
     await createService(this.iotAgentUrl, `/device/${device.id}`, device.id, 'sensor');
+    await this.client.subscribe(`/default/${device.id}/cmd`);
   }
 
   async removeDevice(id) {
@@ -254,7 +273,31 @@ class Connector {
   // Cloud to device (fog)
 
   // cb(event) where event is { id, config: {} }
-  onConfigUpdated(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  onConfigUpdated(cb) {
+    this.client.on('message', async (topic, payload) => {
+      const msg = parseULMessage(topic.toString(), payload.toString());
+
+      if (msg.command === 'setConfig') {
+        const requiredProperties = ['sensor_id', 'event_flags', 'time_sec'];
+        const configKeys = Object.keys(msg.value);
+
+        if (!requiredProperties.every(val => configKeys.includes(val))) {
+          const response = 'Some properties are required: sensor_id, event_flags and time_sec';
+          await this.client.publish(`${topic}exe`, `${msg.id}@setConfig|${response}`);
+          return;
+        }
+
+        _.forEach(msg.value, (value, key) => {
+          msg.value[key] = !Number.isNaN(parseInt(value, 10))
+            && Number.isFinite(parseInt(value, 10))
+            ? parseInt(value, 10) : value;
+        });
+
+        await this.client.publish(`${topic}exe`, `${msg.id}@setConfig|`);
+
+        cb({ id: msg.id, config: msg.value });
+      }
+    });
   }
 
   // cb(event) where event is { id, properties: {} }
@@ -268,7 +311,7 @@ class Connector {
 
       if (msg.command === 'getData') {
         await this.client.publish(`${topic}exe`, payload);
-        cb({ id: msg.id, sensorId: parseInt(msg.sensorId, 10) });
+        cb({ id: msg.id, sensorId: parseInt(msg.entityId, 10) });
       }
     });
   }
@@ -280,7 +323,7 @@ class Connector {
 
       if (msg.command === 'setData') {
         await this.client.publish(`${topic}exe`, payload);
-        cb({ id: msg.id, sensorId: parseInt(msg.sensorId, 10), data: msg.value });
+        cb({ id: msg.id, sensorId: parseInt(msg.entityId, 10), data: msg.value });
       }
     });
   }
