@@ -180,6 +180,9 @@ async function messageHandler(topic, payload) {
     await this.client.publish(`${topic}exe`, `${message.id}@setConfig|`);
 
     this.onConfigUpdatedCb(message.id, [message.value]);
+  } else if (message.command === 'setProperties') {
+    await this.client.publish(`${topic}exe`, `${message.id}@setProperties|`);
+    this.onPropertiesUpdatedCb({ id: message.id, properties: message.value });
   }
 }
 
@@ -193,6 +196,7 @@ class Connector {
     this.onDataUpdatedCb = _.noop();
     this.onDataRequestedCb = _.noop();
     this.onConfigUpdatedCb = _.noop();
+    this.onPropertiesUpdatedCb = _.noop();
 
     await createService(this.iotAgentUrl, this.orionUrl, '/device', 'default', 'device');
 
@@ -314,7 +318,8 @@ class Connector {
   }
 
   // cb(event) where event is { id, properties: {} }
-  onPropertiesUpdated(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  async onPropertiesUpdated(cb) {
+    this.onPropertiesUpdatedCb = cb;
   }
 
   // cb(event) where event is { id, sensorId }
