@@ -306,7 +306,15 @@ class Connector {
   }
 
   // cb(event) where event is { id, properties: {} }
-  onPropertiesUpdated(cb) { // eslint-disable-line no-empty-function,no-unused-vars
+  async onPropertiesUpdated(cb) {
+    this.client.on('message', async (topic, payload) => {
+      const msg = parseULMessage(topic.toString(), payload.toString());
+
+      if (msg.command === 'setProperties') {
+        await this.client.publish(`${topic}exe`, `${msg.id}@setProperties|`);
+        cb({ id: msg.id, properties: msg.value });
+      }
+    });
   }
 
   // cb(event) where event is { id, sensorId }
