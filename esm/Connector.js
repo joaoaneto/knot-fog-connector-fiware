@@ -156,10 +156,63 @@ function parseULMessage(topic, message) {
   };
 }
 
+async function removeDeviceFromIoTAgent(iotAgentUrl, id) {
+  let url = `${iotAgentUrl}/iot/devices/${id}`;
+  const headers = {
+    'fiware-service': 'knot',
+    'fiware-servicepath': '/device',
+  };
+
+  await request.delete({ url, headers, json: true });
+
+  headers['fiware-servicepath'] = `/device/${id}`;
+  url = `${iotAgentUrl}/iot/devices`;
+  const sensors = await request.get({ url, headers, json: true });
+  if (sensors.count === 0) {
+    return;
+  }
+
+  const promises = sensors.devices.map(async (sensor) => {
+    url = `${iotAgentUrl}/iot/devices/${sensor.device_id}`;
+    await request.delete({ url, headers, json: true });
+  });
+
+  await Promise.all(promises);
+
+  const { resource } = config.get('service');
+  url = `${iotAgentUrl}/iot/services/?resource=${resource}&apikey=${id}`;
+  await request.delete({ url, headers, json: true });
+}
+
+async function removeDeviceFromOrion(orionUrl, id) {
+  let url = `${orionUrl}/v2/entities/${id}`;
+  const headers = {
+    'fiware-service': 'knot',
+    'fiware-servicepath': '/device',
+  };
+
+  await request.delete({ url, headers, json: true });
+
+  headers['fiware-servicepath'] = `/device/${id}`;
+  url = `${orionUrl}/v2/entities`;
+  const sensors = await request.get({ url, headers, json: true });
+  if (sensors.length === 0) {
+    return;
+  }
+
+  const promises = sensors.map(async (sensor) => {
+    url = `${orionUrl}/v2/entities/${sensor.id}`;
+    await request.delete({ url, headers, json: true });
+  });
+
+  await Promise.all(promises);
+}
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.hostname}:${settings.port}`;
     this.iotAgentMQTT = `mqtt://${settings.hostname}`;
+    this.orionUrl = `http://${settings.hostname}:1026`;
   }
 
   async start() {
@@ -191,7 +244,9 @@ class Connector {
     await this.client.subscribe(`/default/${device.id}/cmd`);
   }
 
-  async removeDevice(id) { // eslint-disable-line no-empty-function,no-unused-vars
+  async removeDevice(id) {
+    await removeDeviceFromIoTAgent(this.iotAgentUrl, id);
+    await removeDeviceFromOrion(this.orionUrl, id);
   }
 
   async listDevices() {
