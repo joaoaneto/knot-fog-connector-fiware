@@ -208,6 +208,17 @@ async function removeDeviceFromOrion(orionUrl, id) {
   await Promise.all(promises);
 }
 
+async function subscribeToEntities(client, devices) {
+  const promises = devices.map(async (device) => {
+    await client.subscribe(`/default/${device.id}/cmd`);
+    device.schema.map(async (sensor) => {
+      await client.subscribe(`/${device.id}/${sensor.sensor_id}/cmd`);
+    });
+  });
+
+  await Promise.all(promises);
+}
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.hostname}:${settings.port}`;
@@ -221,7 +232,11 @@ class Connector {
     return new Promise((resolve, reject) => {
       this.client = mqtt.connect(this.iotAgentMQTT);
 
-      this.client.on('connect', () => resolve('connected'));
+      this.client.on('connect', async () => {
+        const devices = await this.listDevices();
+        await subscribeToEntities(this.client, devices);
+        resolve('ready');
+      });
       this.client.on('reconnect', () => reject(new Error('trying to reconnect')));
       this.client.on('close', () => reject(new Error('disconnected')));
       this.client.on('error', error => reject(error));
