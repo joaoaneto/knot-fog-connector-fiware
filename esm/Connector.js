@@ -2,7 +2,7 @@ import _ from 'lodash';
 import request from 'request-promise-native';
 import mqtt from 'async-mqtt';
 
-async function deviceExists(url, headers, id) {
+async function entityExists(url, headers, id) {
   try {
     await request.get({ url: `${url}/${id}`, headers, json: true });
   } catch (error) {
@@ -303,7 +303,7 @@ class Connector {
       'fiware-servicepath': '/device',
     };
 
-    if (await deviceExists(url, headers, device.id)) {
+    if (await entityExists(url, headers, device.id)) {
       return;
     }
 
@@ -362,14 +362,17 @@ class Connector {
       'fiware-servicepath': `/device/${id}`,
     };
 
-    const sensors = await Promise.all(schemaList.map(async (schema) => {
-      await this.client.subscribe(`/${id}/${schema.sensor_id}/cmd`);
-      return mapSensorToFiware(id, schema);
-    }));
+    await Promise.all(schemaList.map(async (schema) => {
+      if (await entityExists(url, headers, schema.sensor_id)) {
+        return;
+      }
 
-    await request.post({
-      url, headers, body: { devices: sensors }, json: true,
-    });
+      await request.post({
+        url, headers, body: { devices: [mapSensorToFiware(id, schema)] }, json: true,
+      });
+      await this.client.subscribe(`/${id}/${schema.sensor_id}/cmd`);
+      mapSensorToFiware(id, schema);
+    }));
   }
 
   async updateProperties(id, properties) {
