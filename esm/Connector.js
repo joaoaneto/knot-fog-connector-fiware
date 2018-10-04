@@ -154,7 +154,7 @@ function parseULMessage(topic, message) {
   };
 }
 
-async function removeDeviceFromIoTAgent(iotAgentUrl, serviceConfig, id) {
+async function removeDeviceFromIoTAgent(iotAgentUrl, id) {
   let url = `${iotAgentUrl}/iot/devices/${id}`;
   const headers = {
     'fiware-service': 'knot',
@@ -177,8 +177,7 @@ async function removeDeviceFromIoTAgent(iotAgentUrl, serviceConfig, id) {
 
   await Promise.all(promises);
 
-  const { resource } = serviceConfig;
-  url = `${iotAgentUrl}/iot/services/?resource=${resource}&apikey=${id}`;
+  url = `${iotAgentUrl}/iot/services/?resource=/iot/d&apikey=${id}`;
   await request.delete({ url, headers, json: true });
 }
 
@@ -317,7 +316,7 @@ class Connector {
   }
 
   async removeDevice(id) {
-    await removeDeviceFromIoTAgent(this.iotAgentUrl, this.serviceConfig, id);
+    await removeDeviceFromIoTAgent(this.iotAgentUrl, id);
     await removeDeviceFromOrion(this.orionUrl, id);
   }
 
