@@ -1,6 +1,6 @@
 {
   "name": "@cesarbr/knot-fog-connector-fiware",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "KNoT fog connector with FIWARE",
   "repository": {
     "type": "git",
