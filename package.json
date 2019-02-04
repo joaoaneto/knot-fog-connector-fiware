@@ -12,7 +12,8 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint .",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "async-mqtt": "^1.0.1",
