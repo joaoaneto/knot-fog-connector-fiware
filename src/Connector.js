@@ -226,8 +226,8 @@ class Connector {
   async start() {
     this.onDataUpdatedCb = _.noop();
     this.onDataRequestedCb = _.noop();
-    this.onConfigUpdatedCb = _.noop();
-    this.onPropertiesUpdatedCb = _.noop();
+    this.onDisconnectedCb = _.noop();
+    this.onReconnectedCb = _.noop();
 
     await createService(this.iotAgentUrl, this.orionUrl, '/device', 'default', 'device');
 
@@ -394,14 +394,12 @@ class Connector {
 
   // Cloud to device (fog)
 
-  // cb(event) where event is { id, config: {} }
-  async onConfigUpdated(cb) {
-    this.onConfigUpdatedCb = cb;
+  async onDisconnected(cb) {
+    this.onDisconnectedCb = cb;
   }
 
-  // cb(event) where event is { id, properties: {} }
-  async onPropertiesUpdated(cb) {
-    this.onPropertiesUpdatedCb = cb;
+  async onReconnected(cb) {
+    this.onReconnectedCb = cb;
   }
 
   // cb(event) where event is { id, sensorId }
@@ -409,7 +407,7 @@ class Connector {
     this.onDataRequestedCb = cb;
   }
 
-  // cb(event) where event is { id, sensorId, data }
+  // cb(event) where event is { id, [sensorIds] }
   async onDataUpdated(cb) {
     this.onDataUpdatedCb = cb;
   }
