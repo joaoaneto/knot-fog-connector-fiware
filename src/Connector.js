@@ -252,10 +252,6 @@ class Connector {
       await this.handleSetData(topic, payload, message);
     } else if (message.command === 'getData') {
       await this.handleGetData(topic, payload, message);
-    } else if (message.command === 'setConfig') {
-      await this.handleSetConfig(topic, message);
-    } else if (message.command === 'setProperties') {
-      await this.handleSetProperties(topic, message);
     }
   }
 
@@ -267,32 +263,6 @@ class Connector {
   async handleGetData(topic, payload, message) {
     await this.client.publish(`${topic}exe`, payload);
     this.onDataRequestedCb(message.id, parseInt(message.entityId, 10));
-  }
-
-  async handleSetConfig(topic, ulMessage) {
-    const requiredProperties = ['sensor_id', 'event_flags', 'time_sec'];
-    const message = ulMessage;
-    const configKeys = Object.keys(message.value);
-
-    if (!requiredProperties.every(val => configKeys.includes(val))) {
-      const response = 'The following properties are required: sensor_id, event_flags and time_sec';
-      await this.client.publish(`${topic}exe`, `${message.id}@setConfig|${response}`);
-      return;
-    }
-
-    _.forEach(message.value, (value, key) => {
-      const intValue = parseInt(value, 10);
-      message.value[key] = !Number.isNaN(intValue) && Number.isFinite(intValue) ? intValue : value;
-    });
-
-    await this.client.publish(`${topic}exe`, `${message.id}@setConfig|`);
-
-    this.onConfigUpdatedCb(message.id, [message.value]);
-  }
-
-  async handleSetProperties(topic, message) {
-    await this.client.publish(`${topic}exe`, `${message.id}@setProperties|`);
-    this.onPropertiesUpdatedCb({ id: message.id, properties: message.value });
   }
 
   async addDevice(device) {
@@ -381,27 +351,6 @@ class Connector {
       will be gone, without consequences; therefore, it shouldn't cause an interuption.
       */
     }
-  }
-
-  async updateProperties(id, properties) {
-    const url = `${this.iotAgentUrl}/iot/devices/${id}`;
-    const headers = {
-      'fiware-service': 'knot',
-      'fiware-servicepath': '/device',
-    };
-
-    const property = Object.keys(properties)[0];
-    const value = properties[property];
-
-    const attribute = {
-      name: property,
-      type: typeof value,
-    };
-
-    await request.put({
-      url, headers, body: { attributes: [attribute] }, json: true,
-    });
-    await this.client.publish(`/default/${id}/attrs/${property}`, value.toString());
   }
 
   // Cloud to device (fog)
