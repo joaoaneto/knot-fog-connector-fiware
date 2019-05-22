@@ -38,18 +38,7 @@ async function createService(iotAgentUrl, orionUrl, servicePath, apiKey, entityT
   service.apikey = apiKey;
   service.cbroker = orionUrl;
 
-  if (entityType === 'device') {
-    service.commands = [
-      {
-        name: 'setConfig',
-        type: 'command',
-      },
-      {
-        name: 'setProperties',
-        type: 'command',
-      },
-    ];
-  } else if (entityType === 'sensor') {
+  if (entityType === 'sensor') {
     service.attributes = [{
       name: 'value',
       type: 'string',
