@@ -112,28 +112,37 @@ function mapSensorFromFiware(device) {
   return schema;
 }
 
-function parseULValue(value) {
-  if (value.indexOf('=') === -1) {
-    return value;
+function parseStringValue(valueType, value) {
+  switch (valueType) {
+    case 1:
+      return parseInt(value, 10);
+    case 2:
+      return Number(value);
+    case 3:
+      return (value === 'true');
+    case 4:
+      return Buffer.from(value).toString('base64');
+    default:
+      break;
   }
 
-  const objValue = {};
-  const attrs = value.split('|');
-
-  attrs.forEach((attr) => {
-    objValue[attr.slice(0, attr.indexOf('='))] = attr.slice(attr.indexOf('=') + 1, attr.length);
-  });
-
-  return objValue;
+  return value;
 }
 
-function parseULMessage(topic, message) {
+function parseULMessage(topic, message, devices) {
+  /*
+  FIWARE's IoT Agent for Ultralight 2.0 commands syntax adheres
+  the following format: <device-id>@<command-name>|<command-value>
+  for this reason, a regex expression is used below to split the
+  incoming payload (message) using the '@' and '|' delimiters.
+  */
+  const [entityId, command, strValue] = message.split(/[@|]/);
   const apiKey = topic.split('/')[1];
-  const entityId = message.slice(0, message.indexOf('@'));
-  const command = message.slice(message.indexOf('@') + 1, message.indexOf('|'));
-  const value = parseULValue(message.slice(message.indexOf('|') + 1, message.length));
-
   const id = apiKey === 'default' ? entityId : apiKey;
+
+  const device = devices.find(obj => obj.id === apiKey);
+  const sensor = device.schema.find(obj => obj.sensorId === Number(entityId));
+  const value = parseStringValue(sensor.valueType, strValue);
 
   return {
     id,
@@ -236,7 +245,9 @@ class Connector {
   }
 
   async messageHandler(topic, payload) {
-    const message = parseULMessage(topic.toString(), payload.toString());
+    const devices = await this.listDevices();
+    const message = parseULMessage(topic, payload.toString(), devices);
+
     if (message.command === 'setData') {
       await this.handleSetData(topic, payload, message);
     } else if (message.command === 'getData') {
