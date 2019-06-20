@@ -2,9 +2,9 @@ import _ from 'lodash';
 import request from 'request-promise-native';
 import mqtt from 'async-mqtt';
 
-async function deviceExists(url, headers, id) {
+async function deviceExists(url, headers) {
   try {
-    await request.get({ url: `${url}/${id}`, headers, json: true });
+    await request.get({ url, headers, json: true });
   } catch (error) {
     if (error.response.statusCode === 404) {
       return false;
@@ -12,6 +12,16 @@ async function deviceExists(url, headers, id) {
   }
 
   return true;
+}
+
+async function deviceExistsOnIoTA(iotAgentUrl, id) {
+  const url = `${iotAgentUrl}/iot/devices/${id}`;
+  const headers = {
+    'fiware-service': 'knot',
+    'fiware-servicepath': '/device',
+  };
+
+  return deviceExists(url, headers);
 }
 
 async function serviceExists(url, headers) {
@@ -277,7 +287,7 @@ class Connector {
       'fiware-servicepath': '/device',
     };
 
-    if (await deviceExists(url, headers, device.id)) {
+    if (await deviceExistsOnIoTA(url, device.id)) {
       return;
     }
 
