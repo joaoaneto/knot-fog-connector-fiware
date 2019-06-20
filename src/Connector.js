@@ -24,6 +24,16 @@ async function deviceExistsOnIoTA(iotAgentUrl, id) {
   return deviceExists(url, headers);
 }
 
+async function deviceExistsOnOrion(orionUrl, id) {
+  const url = `${orionUrl}/v2/entities/${id}`;
+  const headers = {
+    'fiware-service': 'knot',
+    'fiware-servicepath': '/device',
+  };
+
+  return deviceExists(url, headers);
+}
+
 async function serviceExists(url, headers) {
   const service = await request.get({ url, headers, json: true });
   return service.count > 0;
@@ -169,6 +179,10 @@ async function removeDeviceFromIoTAgent(iotAgentUrl, id) {
     'fiware-servicepath': '/device',
   };
 
+  if (!await deviceExistsOnIoTA(iotAgentUrl, id)) {
+    return;
+  }
+
   await request.delete({ url, headers, json: true });
 
   headers['fiware-servicepath'] = `/device/${id}`;
@@ -195,6 +209,10 @@ async function removeDeviceFromOrion(orionUrl, id) {
     'fiware-service': 'knot',
     'fiware-servicepath': '/device',
   };
+
+  if (!await deviceExistsOnOrion(orionUrl, id)) {
+    return;
+  }
 
   await request.delete({ url, headers, json: true });
 
