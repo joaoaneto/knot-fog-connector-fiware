@@ -256,13 +256,18 @@ class Connector {
   }
 
   async handleSetData(topic, payload, message) {
+    const data = [{
+      sensorId: parseInt(message.entityId, 10),
+      value: message.value,
+    }];
     await this.client.publish(`${topic}exe`, payload);
-    this.onDataUpdatedCb(message.id, parseInt(message.entityId, 10), message.value);
+    this.onDataUpdatedCb(message.id, data);
   }
 
   async handleGetData(topic, payload, message) {
+    const sensorIds = [parseInt(message.entityId, 10)];
     await this.client.publish(`${topic}exe`, payload);
-    this.onDataRequestedCb(message.id, parseInt(message.entityId, 10));
+    this.onDataRequestedCb(message.id, sensorIds);
   }
 
   async addDevice(device) {
