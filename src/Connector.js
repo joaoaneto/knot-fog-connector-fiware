@@ -323,7 +323,7 @@ class Connector {
 
   async publishData(id, dataList) {
     const promises = dataList.map(async (data) => {
-      await this.client.publish(`/${id}/${data.sensorId}/attrs/value`, data.value);
+      await this.client.publish(`/${id}/${data.sensorId}/attrs/value`, data.value.toString());
     });
 
     await Promise.all(promises);
