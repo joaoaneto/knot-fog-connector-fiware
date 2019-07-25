@@ -58,23 +58,6 @@ async function createService(iotAgentUrl, orionUrl, servicePath, apiKey, entityT
   service.apikey = apiKey;
   service.cbroker = orionUrl;
 
-  if (entityType === 'sensor') {
-    service.attributes = [{
-      name: 'value',
-      type: 'string',
-    }];
-    service.commands = [
-      {
-        name: 'setData',
-        type: 'command',
-      },
-      {
-        name: 'getData',
-        type: 'command',
-      },
-    ];
-  }
-
   await request.post({
     url, headers, body: { services: [service] }, json: true,
   });
@@ -97,7 +80,6 @@ function mapDeviceToFiware(device) {
 
 function mapSensorToFiware(id, schema) {
   const schemaList = _.map(schema, (value, key) => ({ name: key, type: typeof value, value }));
-
   return {
     device_id: schema.sensorId.toString(),
     entity_name: schema.sensorId.toString(),
@@ -109,6 +91,20 @@ function mapSensorToFiware(id, schema) {
       type: 'string',
       value: id,
     }].concat(schemaList),
+    attributes: [{
+      name: 'value',
+      type: 'string',
+    }],
+    commands: [
+      {
+        name: 'setData',
+        type: 'command',
+      },
+      {
+        name: 'getData',
+        type: 'command',
+      },
+    ],
   };
 }
 
