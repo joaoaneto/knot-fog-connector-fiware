@@ -248,6 +248,7 @@ class Connector {
   async start() {
     this.onDataUpdatedCb = _.noop();
     this.onDataRequestedCb = _.noop();
+    this.onDeviceUnregisteredCb = _.noop();
     this.onDisconnectedCb = _.noop();
     this.onReconnectedCb = _.noop();
 
@@ -319,6 +320,7 @@ class Connector {
   async removeDevice(id) {
     await removeDeviceFromIoTAgent(this.iotAgentUrl, id);
     await removeDeviceFromOrion(this.orionUrl, id);
+    this.onDeviceUnregisteredCb(id);
   }
 
   async listDevices() {
@@ -372,7 +374,7 @@ class Connector {
     });
   }
 
-  // Cloud to device (fog)
+  // Connection callbacks
 
   async onDisconnected(cb) {
     this.onDisconnectedCb = cb;
@@ -382,14 +384,21 @@ class Connector {
     this.onReconnectedCb = cb;
   }
 
-  // cb(event) where event is { id, sensorId }
+  // Cloud to device (fog)
+
+  // cb(event) where event is { id, [ sensorIds ] }
   async onDataRequested(cb) {
     this.onDataRequestedCb = cb;
   }
 
-  // cb(event) where event is { id, [sensorIds] }
+  // cb(event) where event is { id, [{ sensorId, value }] }
   async onDataUpdated(cb) {
     this.onDataUpdatedCb = cb;
+  }
+
+  // cb(event) where event is { id }
+  async onDeviceUnregistered(cb) {
+    this.onDeviceUnregisteredCb = cb;
   }
 }
 
