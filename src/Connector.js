@@ -238,6 +238,14 @@ async function subscribeToEntities(client, devices) {
   await Promise.all(promises);
 }
 
+function isBase64(value) {
+  try {
+    return (Buffer.from(value, 'base64').toString('base64') === value);
+  } catch (error) {
+    return false;
+  }
+}
+
 class Connector {
   constructor(settings) {
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
@@ -350,11 +358,12 @@ class Connector {
   // Device (fog) to cloud
 
   async publishData(id, dataList) {
-    const promises = dataList.map(async (data) => {
-      await this.client.publish(`/${id}/${data.sensorId}/attrs/value`, data.value.toString());
-    });
-
-    await Promise.all(promises);
+    await Promise.all(dataList.map(async (data) => {
+      const value = isBase64(data.value)
+        ? Buffer.from(data.value, 'base64').toString()
+        : data.value.toString();
+      return this.client.publish(`/${id}/${data.sensorId}/attrs/value`, value);
+    }));
   }
 
   async updateSchema(id, schemaList) {
