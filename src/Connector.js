@@ -302,7 +302,7 @@ class Connector {
     };
 
     if (await deviceExistsOnIoTA(this.iotAgentUrl, device.id)) {
-      return;
+      return { id: device.id, token: device.id };
     }
 
     const fiwareDevice = mapDeviceToFiware(device);
@@ -312,6 +312,8 @@ class Connector {
     });
     await createService(this.iotAgentUrl, this.orionUrl, `/device/${device.id}`, device.id, 'sensor');
     await this.client.subscribe(`/default/${device.id}/cmd`);
+
+    return { id: device.id, token: device.id };
   }
 
   async removeDevice(id) {
