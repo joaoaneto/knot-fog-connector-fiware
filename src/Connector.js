@@ -240,6 +240,7 @@ function isBase64(value) {
 
 class Connector {
   constructor(settings) {
+    this.client = null;
     this.iotAgentUrl = `http://${settings.iota.hostname}:${settings.iota.port}`;
     this.orionUrl = `http://${settings.orion.hostname}:${settings.orion.port}`;
     this.iotAgentMQTT = `mqtt://${settings.iota.hostname}`;
@@ -253,20 +254,16 @@ class Connector {
     this.onReconnectedCb = _.noop();
 
     await createService(this.iotAgentUrl, this.orionUrl, '/device', 'default', 'device');
-
-    return new Promise((resolve, reject) => {
-      this.client = mqtt.connect(this.iotAgentMQTT);
-
-      this.client.on('connect', async () => {
-        const devices = await this.listDevices();
-        await subscribeToEntities(this.client, devices);
-        this.client.on('message', async (topic, payload) => {
-          await this.messageHandler(topic, payload);
-        });
-        return resolve();
-      });
-      this.client.on('error', error => reject(error));
+    await this.connectMQTT();
+    const devices = await this.listDevices();
+    await subscribeToEntities(this.client, devices);
+    this.client.on('message', async (topic, payload) => {
+      await this.messageHandler(topic, payload);
     });
+  }
+
+  async connectMQTT() {
+    this.client = await mqtt.connectAsync(this.iotAgentMQTT);
   }
 
   async messageHandler(topic, payload) {
