@@ -264,9 +264,7 @@ class Connector {
 
   async connectDevices() {
     await this.setupDevices();
-    this.client.on('message', async (topic, payload) => {
-      await this.messageHandler(topic, payload);
-    });
+    await this.listenToCommands();
   }
 
   async setupDevices() {
@@ -274,14 +272,24 @@ class Connector {
     await subscribeToEntities(this.client, devices);
   }
 
-  async messageHandler(topic, payload) {
-    const devices = await this.listDevices();
-    const message = parseULMessage(topic, payload.toString(), devices);
+  async listenToCommands() {
+    this.client.on('message', async (topic, payload) => {
+      const devices = await this.listDevices();
+      const message = parseULMessage(topic, payload.toString(), devices);
+      await this.messageHandler(message, topic, payload);
+    });
+  }
 
-    if (message.command === 'setData') {
-      await this.handleSetData(topic, payload, message);
-    } else if (message.command === 'getData') {
-      await this.handleGetData(topic, payload, message);
+  async messageHandler(message, topic, payload) {
+    switch (message.command) {
+      case 'setData':
+        await this.handleSetData(topic, payload, message);
+        break;
+      case 'getData':
+        await this.handleGetData(topic, payload, message);
+        break;
+      default:
+        throw Error(`Unrecognized command ${message.command}`);
     }
   }
 
