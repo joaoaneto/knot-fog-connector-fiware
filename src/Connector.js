@@ -301,7 +301,7 @@ class Connector {
       'fiware-servicepath': '/device',
     };
 
-    if (await deviceExistsOnIoTA(url, device.id)) {
+    if (await deviceExistsOnIoTA(this.iotAgentUrl, device.id)) {
       return;
     }
 
