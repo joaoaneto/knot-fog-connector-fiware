@@ -364,24 +364,12 @@ class Connector {
 
     const sensors = await Promise.all(schemaList.map(async (schema) => {
       await this.client.subscribe(`/${id}/${schema.sensorId}/cmd`);
-
       return mapSensorToFiware(id, schema);
     }));
 
-    try {
-      await request.post({
-        url, headers, body: { devices: sensors }, json: true,
-      });
-    } catch (err) {
-      /*
-      The 409 error means the request couldn't be completed due to a conflict in
-      respect to the target resource - contextually, a (deviceId, serviceId) pair
-      already exists. However, this occurs when attempting to make changes in a
-      resource which the base connector is already acting upon due to a previous
-      request (e.g. updateSchema). As soon as the request is processed, the error
-      will be gone, without consequences; therefore, it shouldn't cause an interuption.
-      */
-    }
+    await request.post({
+      url, headers, body: { devices: sensors }, json: true,
+    });
   }
 
   // Cloud to device (fog)
