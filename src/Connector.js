@@ -162,7 +162,7 @@ function parseULMessage(topic, message, devices) {
 
   return {
     id,
-    entityId,
+    sensorId: parseInt(entityId, 10),
     command,
     value,
   };
@@ -293,19 +293,14 @@ class Connector {
     }
   }
 
-  async handleSetData(topic, payload, message) {
-    const data = [{
-      sensorId: parseInt(message.entityId, 10),
-      value: message.value,
-    }];
+  async handleSetData(topic, payload, { id, sensorId, value }) {
     await this.client.publish(`${topic}exe`, payload);
-    this.onDataUpdatedCb(message.id, data);
+    this.onDataUpdatedCb(id, [{ sensorId, value }]);
   }
 
-  async handleGetData(topic, payload, message) {
-    const sensorIds = [parseInt(message.entityId, 10)];
+  async handleGetData(topic, payload, { id, sensorId }) {
     await this.client.publish(`${topic}exe`, payload);
-    this.onDataRequestedCb(message.id, sensorIds);
+    this.onDataRequestedCb(id, [sensorId]);
   }
 
   async addDevice(device) {
