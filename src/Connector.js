@@ -260,6 +260,12 @@ class Connector {
 
   async connectMQTT() {
     this.client = await mqtt.connectAsync(this.iotAgentMQTT);
+    this.listenToConnectionStatus();
+  }
+
+  listenToConnectionStatus() {
+    this.client.on('close', () => this.onDisconnectedCb());
+    this.client.on('connect', () => this.onReconnectedCb());
   }
 
   async connectDevices() {
