@@ -188,12 +188,10 @@ async function removeDeviceFromIoTAgent(iotAgentUrl, id) {
     return;
   }
 
-  const promises = sensors.devices.map(async (sensor) => {
+  await Promise.all(sensors.devices.map(async (sensor) => {
     url = `${iotAgentUrl}/iot/devices/${sensor.device_id}`;
-    await request.delete({ url, headers, json: true });
-  });
-
-  await Promise.all(promises);
+    return request.delete({ url, headers, json: true });
+  }));
 
   url = `${iotAgentUrl}/iot/services/?resource=/iot/d&apikey=${id}`;
   await request.delete({ url, headers, json: true });
@@ -219,23 +217,17 @@ async function removeDeviceFromOrion(orionUrl, id) {
     return;
   }
 
-  const promises = sensors.map(async (sensor) => {
+  await Promise.all(sensors.map(async (sensor) => {
     url = `${orionUrl}/v2/entities/${sensor.id}`;
-    await request.delete({ url, headers, json: true });
-  });
-
-  await Promise.all(promises);
+    return request.delete({ url, headers, json: true });
+  }));
 }
 
 async function subscribeToEntities(client, devices) {
-  const promises = devices.map(async (device) => {
-    await client.subscribe(`/default/${device.id}/cmd`);
-    device.schema.map(async (sensor) => {
-      await client.subscribe(`/${device.id}/${sensor.sensorId}/cmd`);
-    });
-  });
-
-  await Promise.all(promises);
+  await Promise.all(devices.map(async ({ id, schema }) => {
+    client.subscribe(`/default/${id}/cmd`);
+    return schema.map(async ({ sensorId }) => client.subscribe(`/${id}/${sensorId}/cmd`));
+  }));
 }
 
 function isBase64(value) {
@@ -374,7 +366,7 @@ class Connector {
     };
 
     const sensors = await Promise.all(schemaList.map(async (schema) => {
-      await this.client.subscribe(`/${id}/${schema.sensorId}/cmd`);
+      this.client.subscribe(`/${id}/${schema.sensorId}/cmd`);
       return mapSensorToFiware(id, schema);
     }));
 
