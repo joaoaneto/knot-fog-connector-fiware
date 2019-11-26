@@ -255,15 +255,23 @@ class Connector {
 
     await createService(this.iotAgentUrl, this.orionUrl, '/device', 'default', 'device');
     await this.connectMQTT();
-    const devices = await this.listDevices();
-    await subscribeToEntities(this.client, devices);
+    await this.connectDevices();
+  }
+
+  async connectMQTT() {
+    this.client = await mqtt.connectAsync(this.iotAgentMQTT);
+  }
+
+  async connectDevices() {
+    await this.setupDevices();
     this.client.on('message', async (topic, payload) => {
       await this.messageHandler(topic, payload);
     });
   }
 
-  async connectMQTT() {
-    this.client = await mqtt.connectAsync(this.iotAgentMQTT);
+  async setupDevices() {
+    const devices = await this.listDevices();
+    await subscribeToEntities(this.client, devices);
   }
 
   async messageHandler(topic, payload) {
