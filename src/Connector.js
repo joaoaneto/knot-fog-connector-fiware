@@ -331,6 +331,11 @@ class Connector {
     return { id: device.id, token: device.id };
   }
 
+  // eslint-disable-next-line no-unused-vars
+  async authDevice(id, token) {
+    return deviceExistsOnIoTA(this.iotAgentUrl, id);
+  }
+
   async removeDevice(id) {
     await removeDeviceFromIoTAgent(this.iotAgentUrl, id);
     await removeDeviceFromOrion(this.orionUrl, id);
